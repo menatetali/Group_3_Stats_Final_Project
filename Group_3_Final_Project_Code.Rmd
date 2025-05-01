@@ -1,0 +1,93 @@
+---
+title: "Group 3 Stats Final Project Code"
+output: html_document
+date: "2025-04-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ivreg)
+library(Hmisc)
+```
+
+### Load Data
+``` {r tidy = FALSE}
+dta <- read.csv('final_data_3.csv')
+```
+
+### Create Z (Instrumental Varible)
+``` {r tidy = FALSE}
+dta <- dta %>% 
+  group_by(examiner_id) %>% 
+  mutate(examiner_acceptance_rate = mean(accepted, na.rm = TRUE)) %>% 
+  ungroup()
+dta$accept_rate_bin <- ntile(dta$examiner_acceptance_rate, 20)
+```
+
+### Testing inclusion condition
+``` {r tidy = FALSE}
+inclusion_cond <- lm(accepted ~ examiner_acceptance_rate + female + age + health_condition, data = dta)
+summary(inclusion_cond)
+# Z is statistically significant which means it is a valid instrument
+```
+
+### First Stage Plot 
+``` {r tidy = FALSE}
+# Aggregate binned means
+bin_mean_accept_rate <- aggregate(dta$examiner_acceptance_rate, list(dta$accept_rate_bin), mean)
+bin_mean_accepted <- aggregate(dta$accepted, list(dta$accept_rate_bin), mean)
+
+# Combine into a single dataframe
+meandata_first_stage <- data.frame(
+  mean_accept_rate = bin_mean_accept_rate[,2],
+  mean_accepted = bin_mean_accepted[,2]
+)
+# Run linear regression on binned means
+first_stage_reg <- lm(mean_accepted ~ mean_accept_rate, data = meandata_first_stage)
+
+# Predicted values for line
+pred_first_stage <- data.frame(
+  mean_accept_rate = meandata_first_stage$mean_accept_rate,
+  predicted = predict(first_stage_reg)
+)
+# Plot
+p1 <- ggplot(meandata_first_stage, aes(x = mean_accept_rate, y = mean_accepted)) +
+  geom_point() +
+  geom_line(data = pred_first_stage, aes(x = mean_accept_rate, y = predicted), color = "red") +
+  labs(title = "First Stage: Acceptance vs. Examiner Acceptance Rate",
+       x = "Examiner Acceptance Rate (Binned)", y = "Probability of Acceptance") +
+  theme_minimal()
+p1
+```
+
+# Reduced Form Plot
+``` {r tidy = FALSE}
+# Aggregate binned means
+bin_mean_accept_rate <- aggregate(dta$examiner_acceptance_rate, list(dta$accept_rate_bin), mean)
+bin_mean_employed <- aggregate(dta$employed, list(dta$accept_rate_bin), mean)
+
+# Combine into a single dataframe
+meandata_reduced <- data.frame(
+  mean_accept_rate = bin_mean_accept_rate[,2],
+  mean_employed = bin_mean_employed[,2]
+)
+# Run regression and predict fitted values
+reduced_form_reg <- lm(mean_employed ~ mean_accept_rate, data = meandata_reduced)
+predicted_reduced <- data.frame(
+  mean_accept_rate = meandata_reduced$mean_accept_rate,
+  predicted = predict(reduced_form_reg)
+)
+
+# Plot
+p2 <- ggplot(meandata_reduced, aes(x = mean_accept_rate, y = mean_employed)) +
+  geom_point() +
+  geom_line(data = predicted_reduced, aes(x = mean_accept_rate, y = predicted), color = "blue") +
+  labs(
+    title = "Reduced Form: Employment vs. Examiner Acceptance Rate",
+    x = "Examiner Acceptance Rate (Binned)",
+    y = "Probability of Employment"
+  ) +
+  theme_minimal()
+p2
+```
