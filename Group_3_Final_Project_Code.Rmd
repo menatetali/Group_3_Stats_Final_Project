@@ -14,7 +14,15 @@ library(Hmisc)
 ### Load Data
 ``` {r tidy = FALSE}
 dta <- read.csv('final_data_3.csv')
+head(dta)
 ```
+
+### Run baseline regression (no instrument)
+
+````{r tidy = FALSE}
+baseline_reg <- lm(employed ~ accepted + female + age + health_condition, data = dta)
+summary(baseline_reg)
+````
 
 ### Create Z (Instrumental Varible)
 ``` {r tidy = FALSE}
@@ -25,7 +33,7 @@ dta <- dta %>%
 dta$accept_rate_bin <- ntile(dta$examiner_acceptance_rate, 20)
 ```
 
-### Testing inclusion condition
+### Testing inclusion condition/FS Regression
 ``` {r tidy = FALSE}
 inclusion_cond <- lm(accepted ~ examiner_acceptance_rate + female + age + health_condition, data = dta)
 summary(inclusion_cond)
@@ -91,3 +99,17 @@ p2 <- ggplot(meandata_reduced, aes(x = mean_accept_rate, y = mean_employed)) +
   theme_minimal()
 p2
 ```
+
+### Get results of second stage regression to compare with IVReg
+````{r tidy = FALSE}
+dta$accepted_hat <- fitted(inclusion_cond)
+
+second_stage <- lm(employed ~ accepted_hat + female + age + health_condition, data = dta)
+summary(second_stage)
+````
+
+### Use IVReg to estimate the regression
+````{r tidy = FALSE}
+iv_regression<-ivreg(employed ~ female + age + health_condition | accepted | examiner_acceptance_rate, data = dta)
+summary(iv_regression)
+````
