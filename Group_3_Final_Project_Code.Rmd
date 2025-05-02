@@ -113,3 +113,49 @@ summary(second_stage)
 iv_regression<-ivreg(employed ~ female + age + health_condition | accepted | examiner_acceptance_rate, data = dta)
 summary(iv_regression)
 ````
+
+### Permutation Testing
+``` {r tidy = FALSE}
+# Set up
+reps <- 1000
+obs <- nrow(dta)
+CoefMatrix <- matrix(NA, reps, 3)  # columns: OLS, IV, difference
+
+# Bootstrap loop
+set.seed(42)  # for reproducibility
+
+for (ii in 1:reps) {
+  SampleObs <- sample(1:obs, obs, replace = TRUE)
+  bootdata <- dta[SampleObs, ]
+  
+  # OLS: Employment ~ Accepted
+  baseline_reg <- lm(employed ~ accepted + female + age + health_condition, data = dta)
+  CoefMatrix[ii, 1] <- coef(baseline_reg)["accepted"]
+  
+  # IV: using examiner_acceptance_rate as instrument for accepted
+iv_regression<-ivreg(employed ~ female + age + health_condition | accepted | examiner_acceptance_rate,
+                     data = bootdata)
+  CoefMatrix[ii, 2] <- coef(iv_regression)["accepted"]
+}
+
+# Store difference
+CoefMatrix[, 3] <- CoefMatrix[, 1] - CoefMatrix[, 2]
+
+# Summary statistics
+cat("OLS estimate (mean, SD):", round(c(mean(CoefMatrix[,1]), sd(CoefMatrix[,1])), 4), "\n")
+cat("IV estimate (mean, SD):", round(c(mean(CoefMatrix[,2]), sd(CoefMatrix[,2])), 4), "\n")
+cat("Difference (mean, SD):", round(c(mean(CoefMatrix[,3]), sd(CoefMatrix[,3])), 4), "\n")
+
+# Simple t-statistic for the difference
+tdiff <- mean(CoefMatrix[,3]) / sd(CoefMatrix[,3])
+cat("T-statistic for OLS - IV:", round(tdiff, 4), "\n")
+
+
+```
+
+
+
+
+
+
+
