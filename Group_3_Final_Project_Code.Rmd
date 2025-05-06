@@ -136,7 +136,7 @@ for (ii in 1:reps) {
   bootdata <- dta[SampleObs, ]
   
   # OLS: Employment ~ Accepted
-  baseline_reg <- lm(employed ~ accepted + female + age + health_condition, data = dta)
+  baseline_reg <- lm(employed ~ accepted + female + age + health_condition, data = bootdata)
   CoefMatrix[ii, 1] <- coef(baseline_reg)["accepted"]
   
   # IV: using examiner_acceptance_rate as instrument for accepted
