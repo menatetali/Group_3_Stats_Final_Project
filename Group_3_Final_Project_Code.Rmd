@@ -69,6 +69,13 @@ p1 <- ggplot(meandata_first_stage, aes(x = mean_accept_rate, y = mean_accepted))
 p1
 ```
 
+# Reduced Form Regression
+``` {r tidy = FALSE}
+reduced_form <- lm(employed ~ examiner_acceptance_rate + female + age + health_condition, data = dta)
+summary(reduced_form)
+```
+
+
 # Reduced Form Plot
 ``` {r tidy = FALSE}
 # Aggregate binned means
